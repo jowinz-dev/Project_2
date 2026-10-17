@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book of Trust - Shop Dashboard</title>
+    <!-- Status Banner Component -->
+    <div id="status-banner" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; margin-bottom: 15px; font-weight: bold; border-radius: 4px; transition: background-color 0.3s ease;">
+    <span id="status-dot" style="width: 12px; height: 12px; border-radius: 50%; display: inline-block;"></span>
+    <span id="status-text">Checking connection...</span>
+    </div>
+
+    <!-- Links your standalone CSS file out of the sibling static folder -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <header>
+        <h1 style="margin:0; font-size: 1.5rem;">🏪 Book of Trust</h1>
+        <p style="margin:5px 0 0 0; font-size: 0.8rem; opacity: 0.9;">Local Shop & Credit Tracker</p>
+    </header>
+
+    <div class="container">
+
+        <!-- Section 1: Quick Sale Logger -->
+        <section>
+            <h2>💵 Quick Sale Logger</h2>
+            <form id="quick-sale-form" action="/sell" method="POST">
+                <label>Select Item</label>
+                <select name="item_id">
+                    {% for item in inventory %}
+                    <option value="{{ item.id }}">{{ item.item_name }} (Stock: {{ item.stock_quantity }})</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-green">Confirm Cash Sale</button>
+            </form>
+        </section>
+
+        <!-- Section 2: Manage Credit/Debts -->
+        <section>
+            <h2>🤝 Book of Trust (Debts)</h2>
+            <form id="debt-form" action="/update-debt" method="POST">
+                <label>Select Customer</label>
+                <select name="customer_id">
+                    {% for c in all_customers %}
+                    <option value="{{ c.id }}">{{ c.customer_name }} (Owes: UGX {{ c.total_debt }})</option>
+                    {% endfor %}
+                </select>
+                <label>Amount (UGX)</label>
+                <input type="number" name="amount" placeholder="e.g. 5000" required>
+                <div class="grid">
+                    <button type="submit" name="action" value="add" class="btn-red">➕ Add Debt</button>
+                    <button type="submit" name="action" value="pay" class="btn-blue">✅ Got Paid</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Section 3: Add New Customer Profile -->
+        <section>
+            <h2>👤 Register New Customer</h2>
+            <form action="/add-customer" method="POST">
+                <label>Customer Name</label>
+                <input type="text" name="customer_name" placeholder="Name" required>
+                <label>Phone Number (Optional)</label>
+                <input type="text" name="phone_number" placeholder="07...">
+                <label>Amount (UGX)</label>
+                <input type="number" name="amount" min="1" placeholder="e.g. 5000" required>
+                <button type="submit" class="btn-dark">Save Profile</button>
+            </form>
+        </section>
+
+        <section>
+            <h2>📥 Restock Inventory</h2>
+            <form action="/restock" method="POST">
+                <label>Select Item to Restock</label>
+                <select name="item_id">
+                    {% for item in inventory %}
+                    <option value="{{ item.id }}">{{ item.item_name }} (Current: {{ item.stock_quantity }})</option>
+                    {% endfor %}
+                </select>
+                <label>Quantity to Add</label>
+                <input type="number" name="quantity" placeholder="e.g. 10" min="1" required>
+                <button type="submit" class="btn-dark" style="background: #2563eb;">Update Stock Level</button>
+            </form>
+        </section>
+        
+        <section>
+            <h2>📦 Add New Product to Shop</h2>
+            <form action="/add-item" method="POST">
+                <label>Product Name</label>
+                <input type="text" name="item_name" placeholder="e.g. Rice (1kg), Bread" required>
+                
+                <label>Initial Stock Quantity</label>
+                <input type="number" name="stock_quantity" min="0" placeholder="e.g. 10" required>
+                
+                <label>Selling Price per Unit (UGX)</label>
+                <input type="number" name="price_per_unit" min="1" placeholder="e.g. 4000" required>
+                
+                <button type="submit" class="btn-dark" style="background: #16a34a;">Add to Inventory</button>
+            </form>
+        </section>
+
+        <!-- Section 4: Inventory Monitor -->
+        <section>
+            <h2>📦 Stock Monitor</h2>
+            <div>
+                {% for item in inventory %}
+                <div class="item-row">
+                    <div>
+                        <strong style="color: #111827;">{{ item.item_name }}</strong>
+                        <div style="font-size: 0.75rem; color: #9ca3af;">UGX {{ item.price_per_unit }} each</div>
+                    </div>
+                    <div>
+                        {% if item.stock_quantity <= 5 %}
+                        <span class="badge badge-red">Low Stock: {{ item.stock_quantity }}</span>
+                        {% else %}
+                        <span class="badge badge-green">Qty: {{ item.stock_quantity }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+
+        <script>
+
+        function saveOfflineAction(endpoint, data) {
+    let queue = JSON.parse(localStorage.getItem('offlineActions')) || [];
+    queue.push({ endpoint, data, timestamp: Date.now() });
+    localStorage.setItem('offlineActions', JSON.stringify(queue));
+    alert("Saved offline! Will sync automatically when network returns.");
+}
+
+// Function to sync data to your Flask server
+async function syncOfflineData() {
+    if (!navigator.onLine) return;
+    
+    let queue = JSON.parse(localStorage.getItem('offlineActions')) || [];
+    if (queue.length === 0) return;
+
+    console.log("Reconnected! Syncing offline transactions...");
+
+    for (let item of queue) {
+        try {
+            let formData = new FormData();
+            for (let key in item.data) {
+                formData.append(key, item.data[key]);
+            }
+
+            let response = await fetch(item.endpoint, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                // Remove item from local queue if successfully sent to Flask
+                queue = queue.filter(q => q.timestamp !== item.timestamp);
+                localStorage.setItem('offlineActions', JSON.stringify(queue));
+            }
+        } catch (error) {
+            console.error("Failed to sync item, retrying later", error);
+            break; 
+        }
+    }
+    
+    // Reload dashboard to get fresh data from SQLite once completely synced
+    if (queue.length === 0) {
+        window.location.reload();
+    }
+}
+
+    // Listen for network status changes
+    window.addEventListener('online', syncOfflineData);
+    // Try to sync on initial page load if online
+    window.addEventListener('load', syncOfflineData);
+
+    document.addEventListener("DOMContentLoaded", () => {
+    
+    // 1. HANDLE QUICK SALE LOGGING
+    const saleForm = document.getElementById("quick-sale-form");
+    if (saleForm) {
+        saleForm.addEventListener("submit", async (e) => {
+            e.preventDefault(); // Stop the page from reloading normally
+            
+            const formData = new FormData(saleForm);
+            const dataObject = {
+                item_id: formData.get("item_id"),
+                quantity: formData.get("quantity") || 1
+            };
+
+            try {
+                // Try sending data immediately to Flask
+                let response = await fetch("/sell", { method: "POST", body: formData });
+                if (response.ok) {
+                    window.location.reload(); // Success! Reload to refresh stock
+                } else {
+                    saveOfflineAction("/sell", dataObject);
+                }
+            } catch (error) {
+                // If Wi-Fi fails or network drops, save it locally!
+                saveOfflineAction("/sell", dataObject);
+            }
+        });
+    }
+
+    // 2. HANDLE DEBT MODIFICATIONS
+    const debtForm = document.getElementById("debt-form");
+    if (debtForm) {
+        debtForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            // Identify which button was clicked (+ Add Debt or Got Paid)
+            const actionButton = e.submitter ? e.submitter.getAttribute("name") || "action" : "action";
+            const actionValue = e.submitter ? e.submitter.value : "add";
+
+            const formData = new FormData(debtForm);
+            formData.append(actionButton, actionValue); // Ensure backend knows if it's add or pay
+
+            const dataObject = {
+                customer_id: formData.get("customer_id"),
+                amount: formData.get("amount"),
+                action: actionValue
+            };
+
+            try {
+                let response = await fetch("/update-debt", { method: "POST", body: formData });
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    saveOfflineAction("/update-debt", dataObject);
+                }
+            } catch (error) {
+                saveOfflineAction("/update-debt", dataObject);
+            }
+        });
+    }
+});
+function updateNetworkStatus() {
+    const banner = document.getElementById("status-banner");
+    const dot = document.getElementById("status-dot");
+    const text = document.getElementById("status-text");
+
+    if (!banner || !dot || !text) return;
+
+    if (navigator.onLine) {
+        // App is connected to the shop network
+        banner.style.backgroundColor = "#e2f0d9"; // Light green background
+        banner.style.color = "#385723"; // Dark green text
+        dot.style.backgroundColor = "#70ad47"; // Bright green dot
+        text.innerText = "Connected to Shop Server";
+        
+        // Automatically check if there are pending offline records to sync
+        if (typeof syncOfflineData === "function") {
+            syncOfflineData();
+        }
+    } else {
+        // App lost Wi-Fi connection to your laptop
+        banner.style.backgroundColor = "#fce4d6"; // Light red background
+        banner.style.color = "#c65911"; // Dark red text
+        dot.style.backgroundColor = "#c00000"; // Bright red dot
+        text.innerText = "Offline Mode (Transactions saving locally)";
+    }
+}
+
+// Attach the tracking listeners right away
+window.addEventListener("online", updateNetworkStatus);
+window.addEventListener("offline", updateNetworkStatus);
+document.addEventListener("DOMContentLoaded", updateNetworkStatus);
+    </script>
+
+    </div>
+</body>
+</html>
