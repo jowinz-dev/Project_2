@@ -143,5 +143,4 @@ if __name__ == '__main__':
     app.run(
         host='0.0.0.0', 
         port=5000, 
-        ssl_context=('172.16.8.213+2.pem', '172.16.8.213+2-key.pem')
     )
