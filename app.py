@@ -64,7 +64,7 @@ def dashboard():
         customers = cursor.execute("SELECT * FROM customers WHERE total_debt > 0").fetchall()
         all_customers = cursor.execute("SELECT * FROM customers").fetchall()
         
-        # FIXED INDENTATION: Stays inside the active connection context block
+
         logs = cursor.execute("SELECT * FROM transaction_logs ORDER BY date_created DESC LIMIT 10").fetchall()
 
     return render_template('index.html', inventory=inventory, customers=customers, all_customers=all_customers, logs=logs)
@@ -138,9 +138,5 @@ def add_new_item():
     return redirect(url_for('dashboard'))
 
 if __name__ == '__main__':
-    init_db() 
-    
-    app.run(
-        host='0.0.0.0', 
-        port=5000, 
-    )
+    init_db() Z
+    app.run(host='0.0.0.0', port=5000, debug=True)
