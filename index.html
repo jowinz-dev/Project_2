@@ -1,1 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book of Trust - Local Shop & Credit Tracker</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://jsdelivr.net"></script>
+</head>
+<body class="bg-gray-100 font-sans antialiased text-gray-800">
 
+    <!-- Header -->
+    <header class="bg-blue-600 text-white py-4 shadow-md text-center">
+        <h1 class="text-2xl font-bold flex justify-center items-center gap-2">
+            <span>📖</span> Book of Trust
+        </h1>
+        <p class="text-sm text-blue-100 mt-1">Local Shop & Credit Tracker</p>
+    </header>
+
+    <main class="max-w-2xl mx-auto p-4 space-y-6">
+
+        <!-- Quick Sale Logger Box -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-gray-700">
+                <span>💵</span> Quick Sale Logger
+            </h2>
+            
+            <div class="mb-4">
+                <label for="itemSelect" class="block text-sm font-semibold text-gray-600 mb-1">Select Item</label>
+                <select id="itemSelect" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <!-- Dynamic option loaded by JavaScript -->
+                </select>
+            </div>
+
+            <button onclick="confirmCashSale()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition-colors cursor-pointer shadow-sm">
+                Confirm Cash Sale
+            </button>
+        </section>
+
+        <!-- Book of Trust (Debts) Box -->
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-gray-700">
+                <span>🤝</span> Book of Trust (Debts)
+            </h2>
+
+            <div class="mb-4">
+                <label for="customerSelect" class="block text-sm font-semibold text-gray-600 mb-1">Select Customer</label>
+                <select id="customerSelect" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <!-- Dynamic options loaded by JavaScript -->
+                </select>
+            </div>
+
+            <div class="mb-6">
+                <label for="amountInput" class="block text-sm font-semibold text-gray-600 mb-1">Amount (UGX)</label>
+                <input type="number" id="amountInput" placeholder="e.g. 5000" class="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <button onclick="updateDebt('add')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition-colors cursor-pointer shadow-sm">
+                    ➕ Add Debt
+                </button>
+                <button onclick="updateDebt('pay')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors cursor-pointer shadow-sm">
+                    ✅ Got Paid
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- App Logic replacing Python -->
+    <script>
+        // Initial setup data used if browser storage is empty
+        const initialStock = { item: "Sugar (1kg)", count: 25 };
+        const initialDebts = { "jowinz": 25000.0 };
+
+        // Core App State (Loads from storage or fallback defaults)
+        let stockData = JSON.parse(localStorage.getItem('shop_stock')) || initialStock;
+        let debtData = JSON.parse(localStorage.getItem('shop_debts')) || initialDebts;
+
+        // UI Element References
+        const itemSelect = document.getElementById('itemSelect');
+        const customerSelect = document.getElementById('customerSelect');
+        const amountInput = document.getElementById('amountInput');
+
+        // Render data values directly onto the interface
+        function updateUI() {
+            // Update the Stock Selector UI
+            itemSelect.innerHTML = `<option value="sugar">${stockData.item} (Stock: ${stockData.count})</option>`;
+
+            // Update the Debt Customer Selector UI
+            customerSelect.innerHTML = '';
+            for (const [customer, amount] of Object.entries(debtData)) {
+                customerSelect.innerHTML += `<option value="${customer}">${customer} (Owes: UGX ${amount.toFixed(1)})</option>`;
+            }
+        }
+
+        // Save active structural state into localStorage data blocks
+        function saveData() {
+            localStorage.setItem('shop_stock', JSON.stringify(stockData));
+            localStorage.setItem('shop_debts', JSON.stringify(debtData));
+        }
+
+        // Action: Deduct 1 count item when clicking "Confirm Cash Sale"
+        function confirmCashSale() {
+            if (stockData.count > 0) {
+                stockData.count -= 1;
+                saveData();
+                updateUI();
+                alert(`Sale confirmed! Remaining ${stockData.item} stock: ${stockData.count}`);
+            } else {
+                alert(`Out of stock! Cannot complete cash sale for ${stockData.item}.`);
+            }
+        }
+
+        // Action: Math logic for handling Add Debt / Got Paid
+        function updateDebt(actionType) {
+            const selectedCustomer = customerSelect.value;
+            const inputAmount = parseFloat(amountInput.value);
+
+            if (!inputAmount || inputAmount <= 0) {
+                alert("Please enter a valid amount greater than 0.");
+                return;
+            }
+
+            if (actionType === 'add') {
+                debtData[selectedCustomer] += inputAmount;
+                alert(`Added UGX ${inputAmount} to ${selectedCustomer}'s account.`);
+            } else if (actionType === 'pay') {
+                if (inputAmount > debtData[selectedCustomer]) {
+                    alert(`Warning: Payment amount is greater than what they owe (UGX ${debtData[selectedCustomer]}).`);
+                    return;
+                }
+                debtData[selectedCustomer] -= inputAmount;
+                alert(`Recorded payment of UGX ${inputAmount} from ${selectedCustomer}.`);
+            }
+
+            // Clean input, save states, reflect updates
+            amountInput.value = '';
+            saveData();
+            updateUI();
+        }
+        updateUI();
+    </script>
+</body>
+</html>
