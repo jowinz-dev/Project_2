@@ -1,5 +1,4 @@
 from email.mime import text
-
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 
@@ -47,13 +46,14 @@ def init_db():
                 ('Maize Flour (1kg)', 25, 3500)
             ])
         conn.commit()
+
 def log_activity(text):
     """Inserts a historical event message into the database logs table."""
     with sqlite3.connect(DB_FILE) as conn:
         cursor = conn.cursor()
         cursor.execute("INSERT INTO transaction_logs (activity_text) VALUES (?)", (text,))
         conn.commit()
-        
+
 @app.route('/')
 def dashboard():
     with sqlite3.connect(DB_FILE) as conn:
@@ -64,6 +64,7 @@ def dashboard():
         customers = cursor.execute("SELECT * FROM customers WHERE total_debt > 0").fetchall()
         all_customers = cursor.execute("SELECT * FROM customers").fetchall()
         
+        # FIXED INDENTATION: Stays inside the active connection context block
         logs = cursor.execute("SELECT * FROM transaction_logs ORDER BY date_created DESC LIMIT 10").fetchall()
 
     return render_template('index.html', inventory=inventory, customers=customers, all_customers=all_customers, logs=logs)
@@ -106,7 +107,6 @@ def update_debt():
         conn.commit()
     return redirect(url_for('dashboard'))
 
-
 @app.route('/restock', methods=['POST'])
 def restock_item():
     item_id = request.form.get('item_id')
@@ -118,6 +118,7 @@ def restock_item():
             cursor.execute("UPDATE inventory SET stock_quantity = stock_quantity + ? WHERE id = ?", (added_qty, item_id))
             conn.commit()
     return redirect(url_for('dashboard'))
+
 @app.route('/add-item', methods=['POST'])
 def add_new_item():
     name = request.form.get('item_name')
@@ -132,16 +133,15 @@ def add_new_item():
                 (name, qty, price)
             )
             conn.commit()
-        # Log the activity
         log_activity(f"Added brand new item to inventory: {name} (Initial Qty: {qty})")
         
     return redirect(url_for('dashboard'))
 
-
 if __name__ == '__main__':
-import os
-port = int(os.environ.get("PORT", 5000))
+    init_db() 
+    
     app.run(
         host='0.0.0.0', 
-        port=port, 
+        port=5000, 
+        ssl_context=('172.16.8.213+2.pem', '172.16.8.213+2-key.pem')
     )
