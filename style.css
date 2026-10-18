@@ -1,1 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book of Trust - Local Shop & Credit Tracker</title>
+    <!-- Connecting the separate stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
+    <!-- Header -->
+    <header>
+        <h1><span>🏪</span> Book of Trust</h1>
+        <p>Local Shop & Credit Tracker</p>
+    </header>
+
+    <main>
+        <!-- Quick Sale Logger Box -->
+        <section>
+            <h2><span>💵</span> Quick Sale Logger</h2>
+            <div class="form-group">
+                <label for="itemSelect">Select Item</label>
+                <select id="itemSelect"></select>
+            </div>
+            <button onclick="confirmCashSale()" class="btn-green">
+                Confirm Cash Sale
+            </button>
+        </section>
+
+        <!-- Book of Trust (Debts) Box -->
+        <section>
+            <h2><span>🤝</span> Book of Trust (Debts)</h2>
+            <div class="form-group">
+                <label for="customerSelect">Select Customer</label>
+                <select id="customerSelect"></select>
+            </div>
+            <div class="form-group">
+                <label for="amountInput">Amount (UGX)</label>
+                <input type="number" id="amountInput" placeholder="e.g. 5000">
+            </div>
+            <div class="grid-2">
+                <button onclick="updateDebt('add')" class="btn-red">
+                    ➕ Add Debt
+                </button>
+                <button onclick="updateDebt('pay')" class="btn-blue">
+                    ✅ Got Paid
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- App Logic -->
+    <script>
+        const initialStock = { item: "Sugar (1kg)", count: 25 };
+        const initialDebts = { "jowinz": 25000.0 };
+
+        let stockData = JSON.parse(localStorage.getItem('shop_stock')) || initialStock;
+        let debtData = JSON.parse(localStorage.getItem('shop_debts')) || initialDebts;
+
+        const itemSelect = document.getElementById('itemSelect');
+        const customerSelect = document.getElementById('customerSelect');
+        const amountInput = document.getElementById('amountInput');
+
+        function updateUI() {
+            itemSelect.innerHTML = `<option value="sugar">${stockData.item} (Stock: ${stockData.count})</option>`;
+            customerSelect.innerHTML = '';
+            for (const [customer, amount] of Object.entries(debtData)) {
+                customerSelect.innerHTML += `<option value="${customer}">${customer} (Owes: UGX ${amount.toFixed(1)})</option>`;
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('shop_stock', JSON.stringify(stockData));
+            localStorage.setItem('shop_debts', JSON.stringify(debtData));
+        }
+
+        function confirmCashSale() {
+            if (stockData.count > 0) {
+                stockData.count -= 1;
+                saveData();
+                updateUI();
+                alert(`Sale confirmed! Remaining ${stockData.item} stock: ${stockData.count}`);
+            } else {
+                alert(`Out of stock! Cannot complete cash sale for ${stockData.item}.`);
+            }
+        }
+
+        function updateDebt(actionType) {
+            const selectedCustomer = customerSelect.value;
+            const inputAmount = parseFloat(amountInput.value);
+
+            if (!inputAmount || inputAmount <= 0) {
+                alert("Please enter a valid amount greater than 0.");
+                return;
+            }
+
+            if (actionType === 'add') {
+                debtData[selectedCustomer] += inputAmount;
+                alert(`Added UGX ${inputAmount} to ${selectedCustomer}'s account.`);
+            } else if (actionType === 'pay') {
+                if (inputAmount > debtData[selectedCustomer]) {
+                    alert(`Warning: Payment amount is greater than what they owe (UGX ${debtData[selectedCustomer]}).`);
+                    return;
+                }
+                debtData[selectedCustomer] -= inputAmount;
+                alert(`Recorded payment of UGX ${inputAmount} from ${selectedCustomer}.`);
+            }
+
+            amountInput.value = '';
+            saveData();
+            updateUI();
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
