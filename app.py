@@ -63,8 +63,8 @@ def dashboard():
         inventory = cursor.execute("SELECT * FROM inventory").fetchall()
         customers = cursor.execute("SELECT * FROM customers WHERE total_debt > 0").fetchall()
         all_customers = cursor.execute("SELECT * FROM customers").fetchall()
-
-    logs = cursor.execute("SELECT * FROM transaction_logs ORDER BY date_created DESC LIMIT 10").fetchall()
+        
+        logs = cursor.execute("SELECT * FROM transaction_logs ORDER BY date_created DESC LIMIT 10").fetchall()
 
     return render_template('index.html', inventory=inventory, customers=customers, all_customers=all_customers, logs=logs)
 
